@@ -187,7 +187,11 @@
     <h1 id="setup-title">🥗 食事記録 — 初期設定</h1>
     <p id="setup-desc">最初に一度だけ設定します。設定はこのブラウザに保存されます。</p>
 
-    <label class="setup-label">① Claude API Key</label>
+    <label class="setup-label">① ユーザー名</label>
+    <span class="setup-sub">あなたの名前を入力してください（例：Sachiko、Gainer）</span>
+    <input class="setup-input" id="cfg-user" type="text" placeholder="ユーザー名">
+
+    <label class="setup-label">② Claude API Key</label>
     <span class="setup-sub">Anthropic Console → API Keys から取得してください</span>
     <div style="position:relative">
       <input class="setup-input" id="cfg-claude" type="password" placeholder="sk-ant-..." style="margin-bottom:0;padding-right:44px">
@@ -195,7 +199,7 @@
     </div>
     <div style="margin-bottom:18px"></div>
 
-    <label class="setup-label">② Google Apps Script Web App URL</label>
+    <label class="setup-label">③ Google Apps Script Web App URL</label>
     <span class="setup-sub">diet-tracker-gas.gs をデプロイして取得したURLを貼り付けてください</span>
     <input class="setup-input" id="cfg-gas" type="url" placeholder="https://script.google.com/macros/s/...">
 
@@ -226,7 +230,7 @@
   <div class="header">
     <div style="max-width:480px;margin:0 auto;">
       <div class="header-top">
-        <h1>🥗 食事記録</h1>
+        <h1>🥗 食事記録 <span id="username-disp" style="font-size:14px;opacity:0.85;font-weight:400"></span></h1>
         <div class="header-btns">
           <button class="header-btn" onclick="openSheet()">📊 シート</button>
           <button class="header-btn" onclick="resetSetup()">⚙️</button>
@@ -303,7 +307,7 @@
 </div>
 
 <script>
-const GOAL = 1200;
+const GOAL = 1800;
 let log = [];       // [{id, date, time, food, grams, calories, note}]
 let todayWeight = "";
 let currentDate = "";
@@ -314,18 +318,21 @@ let claudeKey = "";
 
 // ===== SETUP =====
 function saveSetup() {
+  const user   = document.getElementById('cfg-user').value.trim();
   const claude = document.getElementById('cfg-claude').value.trim();
   const gas    = document.getElementById('cfg-gas').value.trim();
-  if (!claude || !gas) { alert('両方の項目を入力してください'); return; }
+  if (!user || !claude || !gas) { alert('すべての項目を入力してください'); return; }
+  localStorage.setItem('diet-username', user);
   localStorage.setItem('diet-claude-key', claude);
   localStorage.setItem('diet-gas-url', gas);
   initApp();
 }
 
 function loadSetup() {
+  username  = localStorage.getItem('diet-username') || '';
   claudeKey = localStorage.getItem('diet-claude-key') || '';
   gasUrl    = localStorage.getItem('diet-gas-url') || '';
-  return claudeKey && gasUrl;
+  return username && claudeKey && gasUrl;
 }
 
 function resetSetup() {
@@ -333,6 +340,7 @@ function resetSetup() {
   document.getElementById('setup').style.display = 'flex';
   document.getElementById('setup-title').textContent = '⚙️ 設定の確認・変更';
   document.getElementById('setup-desc').textContent = '現在保存されている設定です。変更する場合は上書きして保存してください。';
+  document.getElementById('cfg-user').value   = localStorage.getItem('diet-username') || '';
   document.getElementById('cfg-claude').value = localStorage.getItem('diet-claude-key') || '';
   document.getElementById('cfg-gas').value    = localStorage.getItem('diet-gas-url') || '';
   document.getElementById('cfg-claude').type  = 'password';
@@ -429,6 +437,7 @@ function cancelSetup() {
 
 function clearSetup() {
   if (!confirm('設定を削除してリセットしますか？')) return;
+  localStorage.removeItem('diet-username');
   localStorage.removeItem('diet-claude-key');
   localStorage.removeItem('diet-gas-url');
   location.reload();
@@ -460,6 +469,7 @@ function getAppDate() {
 function initApp() {
   document.getElementById('setup').style.display = 'none';
   document.getElementById('app').style.display = 'block';
+  document.getElementById('username-disp').textContent = username;
   const today = getAppDate();
   document.getElementById('date-picker').value = today;
   currentDate = today;
@@ -490,7 +500,8 @@ function loadCache(date) {
 
 async function gasRequest(payload) {
   const action = payload.action;
-  const dataStr = encodeURIComponent(JSON.stringify(payload));
+  const payloadWithUser = Object.assign({}, payload, { username: username });
+  const dataStr = encodeURIComponent(JSON.stringify(payloadWithUser));
   const url = gasUrl + '?action=' + action + '&data=' + dataStr;
   const res = await fetch(url, { method: 'GET', redirect: 'follow' });
   const text = await res.text();
@@ -513,15 +524,15 @@ async function loadLog(date) {
   }
 
   showSyncing(true);
-  //showDebug('▶ 通信開始 date=' + date);
-  //showDebug('gasUrl=' + (gasUrl ? gasUrl.slice(0,60)+'...' : '未設定'));
+  showDebug('▶ 通信開始 date=' + date);
+  showDebug('gasUrl=' + (gasUrl ? gasUrl.slice(0,60)+'...' : '未設定'));
   try {
     const url = gasUrl + '?action=getLog&data=' + encodeURIComponent(JSON.stringify({date: date}));
-    //showDebug('fetch開始...');
+    showDebug('fetch開始...');
     const res = await fetch(url, { method: 'GET', redirect: 'follow' });
-    //showDebug('status=' + res.status);
+    showDebug('status=' + res.status);
     const text = await res.text();
-    //showDebug('response=' + text.slice(0, 150));
+    showDebug('response=' + text.slice(0, 150));
     const json = JSON.parse(text);
     log = json.foods || [];
     todayWeight = json.weight || '';
@@ -529,9 +540,9 @@ async function loadLog(date) {
     saveCache(date, log, todayWeight);
     renderLog();
     renderWeight();
-    //showDebug('✅ 完了 ' + log.length + '件');
+    showDebug('✅ 完了 ' + log.length + '件');
   } catch(e) {
-    //showDebug('❌ ' + e.name + ': ' + e.message);
+    showDebug('❌ ' + e.name + ': ' + e.message);
     if (!cached) showToast('読み込み失敗: ' + e.message, 'error');
     else showToast('同期失敗（キャッシュ表示中）: ' + e.message, 'info');
   }

@@ -507,7 +507,8 @@ async function loadLog(date) {
     renderLog();
     renderWeight();
   } catch(e) {
-    showToast('データの読み込みに失敗しました', 'error');
+    showToast('読み込み失敗: ' + e.message, 'error');
+    console.error('loadLog error:', e);
   }
   showSyncing(false);
 }
@@ -588,7 +589,8 @@ async function sendFood() {
       showToast(`${result.food} ${result.calories}kcal を記録しました ✓`, 'success');
     }
   } catch(e) {
-    showToast('エラーが発生しました: ' + e.message, 'error');
+    showToast('記録失敗: ' + e.message, 'error');
+    console.error('sendFood error:', e);
   }
   document.getElementById('food-in').value = '';
   setSendLoading(false);
@@ -601,7 +603,7 @@ async function deleteEntry(id) {
     await gasRequest({ action: 'deleteFood', date: currentDate, id });
     log = log.filter(e => e.id !== id);
     renderLog();
-  } catch(e) { showToast('削除に失敗しました', 'error'); }
+  } catch(e) { showToast('削除失敗: ' + e.message, 'error'); }
   showSyncing(false);
 }
 
@@ -614,7 +616,7 @@ async function saveWeight() {
     await gasRequest({ action: 'addWeight', date: currentDate, weight: w });
     todayWeight = w; renderWeight();
     showToast(`体重 ${w}kg を記録しました ✓`, 'success');
-  } catch(e) { showToast('保存に失敗しました', 'error'); }
+  } catch(e) { showToast('体重保存失敗: ' + e.message, 'error'); }
   showSyncing(false);
 }
 

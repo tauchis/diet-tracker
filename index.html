@@ -446,10 +446,20 @@ window.onload = () => {
   }
 };
 
+function getAppDate() {
+  // 日本時間(UTC+9)で取得し、7時未満は前日扱い
+  const now = new Date();
+  const jst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+  if (jst.getUTCHours() < 7) {
+    jst.setUTCDate(jst.getUTCDate() - 1);
+  }
+  return jst.toISOString().slice(0, 10);
+}
+
 function initApp() {
   document.getElementById('setup').style.display = 'none';
   document.getElementById('app').style.display = 'block';
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getAppDate();
   document.getElementById('date-picker').value = today;
   currentDate = today;
   loadLog(today);

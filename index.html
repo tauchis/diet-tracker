@@ -471,6 +471,22 @@ function changeDate() {
 }
 
 // ===== GAS API =====
+// ===== LOCAL CACHE =====
+function cacheKey(date) { return 'diet-cache:' + date; }
+
+function saveCache(date, foods, weight) {
+  try {
+    localStorage.setItem(cacheKey(date), JSON.stringify({ foods: foods, weight: weight }));
+  } catch(e) {}
+}
+
+function loadCache(date) {
+  try {
+    const v = localStorage.getItem(cacheKey(date));
+    return v ? JSON.parse(v) : null;
+  } catch(e) { return null; }
+}
+
 function gasRequest(payload) {
   // JSONP方式でCORSを回避
   return new Promise(function(resolve, reject) {
@@ -578,7 +594,9 @@ async function sendFood() {
       const w = String(result.kg);
       document.getElementById('weight-in').value = w;
       await gasRequest({ action: 'addWeight', date: currentDate, weight: w });
-      todayWeight = w; renderWeight();
+      todayWeight = w;
+      saveCache(currentDate, log, todayWeight);
+      renderWeight();
       showToast(`体重 ${w}kg を記録しました ✓`, 'success');
     } else if (result.type === 'error') {
       showToast(result.message, 'error');
@@ -595,6 +613,7 @@ async function sendFood() {
       };
       await gasRequest({ action: 'addFood', ...entry });
       log.push(entry);
+      saveCache(currentDate, log, todayWeight);
       renderLog();
       showToast(`${result.food} ${result.calories}kcal を記録しました ✓`, 'success');
     }
@@ -612,6 +631,7 @@ async function deleteEntry(id) {
   try {
     await gasRequest({ action: 'deleteFood', date: currentDate, id });
     log = log.filter(e => e.id !== id);
+    saveCache(currentDate, log, todayWeight);
     renderLog();
   } catch(e) { showToast('削除失敗: ' + e.message, 'error'); }
   showSyncing(false);

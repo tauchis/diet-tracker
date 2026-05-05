@@ -191,7 +191,11 @@
     <span class="setup-sub">あなたの名前を入力してください（例：Sachiko、Gainer）</span>
     <input class="setup-input" id="cfg-user" type="text" placeholder="ユーザー名">
 
-    <label class="setup-label">② Claude API Key</label>
+    <label class="setup-label">② 1日の目標カロリー</label>
+    <span class="setup-sub">例：1200、1500、1800（kcal）</span>
+    <input class="setup-input" id="cfg-goal" type="number" placeholder="1200">
+
+    <label class="setup-label">③ Claude API Key</label>
     <span class="setup-sub">Anthropic Console → API Keys から取得してください</span>
     <div style="position:relative">
       <input class="setup-input" id="cfg-claude" type="password" placeholder="sk-ant-..." style="margin-bottom:0;padding-right:44px">
@@ -199,7 +203,7 @@
     </div>
     <div style="margin-bottom:18px"></div>
 
-    <label class="setup-label">③ Google Apps Script Web App URL</label>
+    <label class="setup-label">④ Google Apps Script Web App URL</label>
     <span class="setup-sub">diet-tracker-gas.gs をデプロイして取得したURLを貼り付けてください</span>
     <input class="setup-input" id="cfg-gas" type="url" placeholder="https://script.google.com/macros/s/...">
 
@@ -307,7 +311,7 @@
 </div>
 
 <script>
-const GOAL = 1800;
+let GOAL = 1200;
 let log = [];       // [{id, date, time, food, grams, calories, note}]
 let todayWeight = "";
 let currentDate = "";
@@ -319,10 +323,12 @@ let claudeKey = "";
 // ===== SETUP =====
 function saveSetup() {
   const user   = document.getElementById('cfg-user').value.trim();
+  const goal   = parseInt(document.getElementById('cfg-goal').value) || 1200;
   const claude = document.getElementById('cfg-claude').value.trim();
   const gas    = document.getElementById('cfg-gas').value.trim();
   if (!user || !claude || !gas) { alert('すべての項目を入力してください'); return; }
   localStorage.setItem('diet-username', user);
+  localStorage.setItem('diet-goal-' + user, goal);
   localStorage.setItem('diet-claude-key', claude);
   localStorage.setItem('diet-gas-url', gas);
   initApp();
@@ -332,6 +338,7 @@ function loadSetup() {
   username  = localStorage.getItem('diet-username') || '';
   claudeKey = localStorage.getItem('diet-claude-key') || '';
   gasUrl    = localStorage.getItem('diet-gas-url') || '';
+  if (username) GOAL = parseInt(localStorage.getItem('diet-goal-' + username)) || 1200;
   return username && claudeKey && gasUrl;
 }
 
@@ -340,7 +347,9 @@ function resetSetup() {
   document.getElementById('setup').style.display = 'flex';
   document.getElementById('setup-title').textContent = '⚙️ 設定の確認・変更';
   document.getElementById('setup-desc').textContent = '現在保存されている設定です。変更する場合は上書きして保存してください。';
-  document.getElementById('cfg-user').value   = localStorage.getItem('diet-username') || '';
+  const u = localStorage.getItem('diet-username') || '';
+  document.getElementById('cfg-user').value   = u;
+  document.getElementById('cfg-goal').value   = u ? (localStorage.getItem('diet-goal-' + u) || 1200) : 1200;
   document.getElementById('cfg-claude').value = localStorage.getItem('diet-claude-key') || '';
   document.getElementById('cfg-gas').value    = localStorage.getItem('diet-gas-url') || '';
   document.getElementById('cfg-claude').type  = 'password';
@@ -470,6 +479,8 @@ function initApp() {
   document.getElementById('setup').style.display = 'none';
   document.getElementById('app').style.display = 'block';
   document.getElementById('username-disp').textContent = username;
+  document.getElementById('goal-disp').textContent = GOAL;
+  document.getElementById('ring-remain').textContent = GOAL;
   const today = getAppDate();
   document.getElementById('date-picker').value = today;
   currentDate = today;

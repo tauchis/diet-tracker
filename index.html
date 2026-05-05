@@ -487,40 +487,17 @@ function loadCache(date) {
   } catch(e) { return null; }
 }
 
-function gasRequest(payload) {
-  // JSONP方式でCORSを回避
-  return new Promise(function(resolve, reject) {
-    const cbName = 'gasCb_' + Date.now();
-    const action = payload.action;
-    const dataStr = encodeURIComponent(JSON.stringify(payload));
-    const url = gasUrl + '?action=' + action + '&data=' + dataStr + '&callback=' + cbName;
-
-    const timer = setTimeout(function() {
-      delete window[cbName];
-      if (script.parentNode) script.parentNode.removeChild(script);
-      reject(new Error('GASタイムアウト（15秒）。URLとデプロイ設定を確認してください。'));
-    }, 15000);
-
-    window[cbName] = function(json) {
-      clearTimeout(timer);
-      delete window[cbName];
-      if (script.parentNode) script.parentNode.removeChild(script);
-      if (json.ok === false) {
-        reject(new Error('GASエラー: ' + (json.error || JSON.stringify(json))));
-      } else {
-        resolve(json);
-      }
-    };
-
-    const script = document.createElement('script');
-    script.src = url;
-    script.onerror = function() {
-      clearTimeout(timer);
-      delete window[cbName];
-      reject(new Error('GAS読み込みエラー。URLを確認してください。'));
-    };
-    document.head.appendChild(script);
-  });
+async function gasRequest(payload) {
+  const action = payload.action;
+  const dataStr = encodeURIComponent(JSON.stringify(payload));
+  const url = gasUrl + '?action=' + action + '&data=' + dataStr;
+  const res = await fetch(url, { method: 'GET', redirect: 'follow' });
+  const text = await res.text();
+  let json;
+  try { json = JSON.parse(text); }
+  catch(e) { throw new Error('GASレスポンス不正: ' + text.slice(0, 80)); }
+  if (json.ok === false) throw new Error('GASエラー: ' + (json.error || JSON.stringify(json)));
+  return json;
 }
 
 async function loadLog(date) {

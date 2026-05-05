@@ -237,7 +237,6 @@
         <h1>🥗 食事記録 <span id="username-disp" style="font-size:14px;opacity:0.85;font-weight:400"></span></h1>
         <div class="header-btns">
           <button class="header-btn" onclick="openSheet()">📊 シート</button>
-          <button class="header-btn" onclick="runGasDebug()">🔍</button>
           <button class="header-btn" onclick="resetSetup()">⚙️</button>
         </div>
       </div>
@@ -304,7 +303,6 @@
       </div>
     </div>
 
-    <div id="gas-debug-box" style="display:none;margin:10px 0 0;background:#1e293b;color:#94a3b8;border-radius:10px;padding:12px;font-size:11px;font-family:monospace;white-space:pre-wrap;word-break:break-all;line-height:1.7"></div>
 
     <div class="weight-saved" id="weight-saved">
       <span class="weight-saved-label">⚖️ 本日の体重</span>
@@ -480,23 +478,6 @@ async function runTest() {
   box.textContent = lines.join('\n');
 }
 
-async function runGasDebug() {
-  const box = document.getElementById('gas-debug-box');
-  box.style.display = 'block';
-  box.textContent = '⏳ 実行中...\nusername=' + username + '\ncurrentDate=' + currentDate + '\ngasUrl=' + (gasUrl||'未設定').slice(0,50);
-  try {
-    const payload = { action: 'debug', date: currentDate, username: username };
-    const url = gasUrl + '?action=debug&data=' + encodeURIComponent(JSON.stringify(payload));
-    box.textContent += '\nfetch開始...';
-    const res = await fetch(url, { method: 'GET', redirect: 'follow' });
-    box.textContent += '\nstatus=' + res.status;
-    const text = await res.text();
-    box.textContent += '\nresponse=\n' + text.slice(0, 500);
-  } catch(e) {
-    box.textContent += '\n❌ ' + e.name + ': ' + e.message;
-  }
-}
-
 function cancelSetup() {
   document.getElementById('setup').style.display = 'none';
   document.getElementById('app').style.display = 'block';
@@ -596,7 +577,7 @@ async function loadLog(date) {
   showDebug('▶ 通信開始 date=' + date);
   showDebug('gasUrl=' + (gasUrl ? gasUrl.slice(0,60)+'...' : '未設定'));
   try {
-    const url = gasUrl + '?action=getLog&data=' + encodeURIComponent(JSON.stringify({date: date}));
+    const url = gasUrl + '?action=getLog&data=' + encodeURIComponent(JSON.stringify({date: date, username: username}));
     showDebug('fetch開始...');
     const res = await fetch(url, { method: 'GET', redirect: 'follow' });
     showDebug('status=' + res.status);

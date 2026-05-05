@@ -604,7 +604,7 @@ async function sendFood() {
       const entry = {
         id: 'F-' + now.getTime().toString(),
         date: currentDate,
-        time: now.toLocaleTimeString('ja-JP', { hour:'2-digit', minute:'2-digit' }),
+        time: "'" + now.toLocaleTimeString('ja-JP', { hour:'2-digit', minute:'2-digit' }),
         food: result.food,
         grams: result.grams || 0,
         calories: result.calories || 0,

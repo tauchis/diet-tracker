@@ -502,17 +502,38 @@ async function gasRequest(payload) {
 }
 
 async function loadLog(date) {
-  showSyncing(true);
-  try {
-    const data = await gasRequest({ action: 'getLog', date });
-    log = data.foods || [];
-    todayWeight = data.weight || '';
+  // キャッシュを即表示
+  const cached = loadCache(date);
+  if (cached) {
+    log = cached.foods || [];
+    todayWeight = cached.weight || '';
     document.getElementById('weight-in').value = todayWeight;
     renderLog();
     renderWeight();
+  }
+
+  showSyncing(true);
+  showDebug('▶ 通信開始 date=' + date);
+  showDebug('gasUrl=' + (gasUrl ? gasUrl.slice(0,60)+'...' : '未設定'));
+  try {
+    const url = gasUrl + '?action=getLog&data=' + encodeURIComponent(JSON.stringify({date: date}));
+    showDebug('fetch開始...');
+    const res = await fetch(url, { method: 'GET', redirect: 'follow' });
+    showDebug('status=' + res.status);
+    const text = await res.text();
+    showDebug('response=' + text.slice(0, 150));
+    const json = JSON.parse(text);
+    log = json.foods || [];
+    todayWeight = json.weight || '';
+    document.getElementById('weight-in').value = todayWeight;
+    saveCache(date, log, todayWeight);
+    renderLog();
+    renderWeight();
+    showDebug('✅ 完了 ' + log.length + '件');
   } catch(e) {
-    showToast('読み込み失敗: ' + e.message, 'error');
-    console.error('loadLog error:', e);
+    showDebug('❌ ' + e.name + ': ' + e.message);
+    if (!cached) showToast('読み込み失敗: ' + e.message, 'error');
+    else showToast('同期失敗（キャッシュ表示中）: ' + e.message, 'info');
   }
   showSyncing(false);
 }

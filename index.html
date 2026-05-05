@@ -575,7 +575,7 @@ async function sendFood() {
     } else if (result.food) {
       const now = new Date();
       const entry = {
-        id: now.getTime().toString(),
+        id: 'F-' + now.getTime().toString(),
         date: currentDate,
         time: now.toLocaleTimeString('ja-JP', { hour:'2-digit', minute:'2-digit' }),
         food: result.food,

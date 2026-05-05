@@ -378,28 +378,66 @@ async function runTest() {
 
   if (!gasVal) { lines.push('\n❌ GAS URLが未入力のため中断'); box.textContent = lines.join('\n'); return; }
 
-  // 2. Test GAS connection
-  lines.push('\n--- GAS接続テスト ---');
+  // 2. Test GAS connection (basic)
+  lines.push('\n--- GAS接続テスト（基本）---');
   box.textContent = lines.join('\n') + '\n⏳ 接続中...';
   try {
     const testUrl = gasVal + '?action=getLog&data=' + encodeURIComponent(JSON.stringify({ date: '2000-01-01' }));
-    lines.push('リクエストURL: ' + testUrl.slice(0, 80) + '...');
     const res = await fetch(testUrl, { method: 'GET', redirect: 'follow' });
-    lines.push('HTTPステータス: ' + res.status + ' ' + res.statusText);
+    lines.push('HTTPステータス: ' + res.status);
     const text = await res.text();
-    lines.push('レスポンス(先頭100文字): ' + text.slice(0, 100));
-    try {
-      JSON.parse(text);
-      lines.push('✅ JSONパース成功 → GAS接続OK');
-    } catch(e) {
-      lines.push('❌ JSONパース失敗 → GASのレスポンスが不正');
+    lines.push('レスポンス: ' + text.slice(0, 100));
+    lines.push('✅ GAS接続OK');
+  } catch(err) {
+    lines.push('❌ ' + err.name + ': ' + err.message);
+  }
+
+  // 2b. Test getLog with actual username and today's date
+  lines.push('\n--- getLog実データテスト ---');
+  box.textContent = lines.join('\n') + '\n⏳ 接続中...';
+  try {
+    const uname = localStorage.getItem('diet-username') || '(未設定)';
+    const today = (function() {
+      const now = new Date();
+      const jst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+      if (jst.getUTCHours() < 7) jst.setUTCDate(jst.getUTCDate() - 1);
+      return jst.toISOString().slice(0, 10);
+    })();
+    lines.push('ユーザー名: ' + uname);
+    lines.push('クエリ日付: ' + today);
+    const payload = { action: 'getLog', date: today, username: uname };
+    const url2 = gasVal + '?action=getLog&data=' + encodeURIComponent(JSON.stringify(payload));
+    const res2 = await fetch(url2, { method: 'GET', redirect: 'follow' });
+    const text2 = await res2.text();
+    lines.push('レスポンス全文: ' + text2.slice(0, 300));
+    const j2 = JSON.parse(text2);
+    lines.push('foods件数: ' + (j2.foods ? j2.foods.length : '不明'));
+    lines.push('weight: ' + (j2.weight || '(なし)'));
+    if (j2.foods && j2.foods.length > 0) {
+      lines.push('先頭データ日付: ' + j2.foods[0].date);
     }
   } catch(err) {
-    lines.push('❌ fetchエラー: ' + err.name + ': ' + err.message);
-    if (err.message.includes('Load failed') || err.message.includes('Failed to fetch')) {
-      lines.push('→ CORSまたはネットワークエラーの可能性');
-      lines.push('→ GASのデプロイ設定「アクセス:全員」を確認');
-    }
+    lines.push('❌ ' + err.name + ': ' + err.message);
+  }
+
+  // 2c. Test debug action
+  lines.push('\n--- シート内容デバッグ ---');
+  box.textContent = lines.join('\n') + '\n⏳ 接続中...';
+  try {
+    const uname2 = localStorage.getItem('diet-username') || '';
+    const today2 = (function() {
+      const now = new Date();
+      const jst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+      if (jst.getUTCHours() < 7) jst.setUTCDate(jst.getUTCDate() - 1);
+      return jst.toISOString().slice(0, 10);
+    })();
+    const payload3 = { action: 'debug', date: today2, username: uname2 };
+    const url3 = gasVal + '?action=debug&data=' + encodeURIComponent(JSON.stringify(payload3));
+    const res3 = await fetch(url3, { method: 'GET', redirect: 'follow' });
+    const text3 = await res3.text();
+    lines.push(text3.slice(0, 500));
+  } catch(err) {
+    lines.push('❌ ' + err.name + ': ' + err.message);
   }
 
   // 3. Test Claude API
@@ -445,12 +483,17 @@ async function runTest() {
 async function runGasDebug() {
   const box = document.getElementById('gas-debug-box');
   box.style.display = 'block';
-  box.textContent = '⏳ デバッグ取得中...';
+  box.textContent = '⏳ 実行中...\nusername=' + username + '\ncurrentDate=' + currentDate + '\ngasUrl=' + (gasUrl||'未設定').slice(0,50);
   try {
-    const result = await gasRequest({ action: 'debug', date: currentDate });
-    box.textContent = JSON.stringify(result, null, 2);
+    const payload = { action: 'debug', date: currentDate, username: username };
+    const url = gasUrl + '?action=debug&data=' + encodeURIComponent(JSON.stringify(payload));
+    box.textContent += '\nfetch開始...';
+    const res = await fetch(url, { method: 'GET', redirect: 'follow' });
+    box.textContent += '\nstatus=' + res.status;
+    const text = await res.text();
+    box.textContent += '\nresponse=\n' + text.slice(0, 500);
   } catch(e) {
-    box.textContent = '❌ ' + e.message;
+    box.textContent += '\n❌ ' + e.name + ': ' + e.message;
   }
 }
 

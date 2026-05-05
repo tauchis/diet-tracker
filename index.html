@@ -237,6 +237,7 @@
         <h1>🥗 食事記録 <span id="username-disp" style="font-size:14px;opacity:0.85;font-weight:400"></span></h1>
         <div class="header-btns">
           <button class="header-btn" onclick="openSheet()">📊 シート</button>
+          <button class="header-btn" onclick="runGasDebug()">🔍</button>
           <button class="header-btn" onclick="resetSetup()">⚙️</button>
         </div>
       </div>
@@ -302,6 +303,8 @@
         <div class="empty">まだ記録がありません<span class="empty-icon">🍽️</span></div>
       </div>
     </div>
+
+    <div id="gas-debug-box" style="display:none;margin:10px 0 0;background:#1e293b;color:#94a3b8;border-radius:10px;padding:12px;font-size:11px;font-family:monospace;white-space:pre-wrap;word-break:break-all;line-height:1.7"></div>
 
     <div class="weight-saved" id="weight-saved">
       <span class="weight-saved-label">⚖️ 本日の体重</span>
@@ -437,6 +440,18 @@ async function runTest() {
 
   lines.push('\n--- テスト完了 ---');
   box.textContent = lines.join('\n');
+}
+
+async function runGasDebug() {
+  const box = document.getElementById('gas-debug-box');
+  box.style.display = 'block';
+  box.textContent = '⏳ デバッグ取得中...';
+  try {
+    const result = await gasRequest({ action: 'debug', date: currentDate });
+    box.textContent = JSON.stringify(result, null, 2);
+  } catch(e) {
+    box.textContent = '❌ ' + e.message;
+  }
 }
 
 function cancelSetup() {

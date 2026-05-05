@@ -259,6 +259,7 @@
 
   <div class="content">
     <div class="toast" id="toast"></div>
+    <div id="debug-box" style="margin:8px 0 0;background:#1e293b;color:#94a3b8;border-radius:10px;padding:10px 12px;font-size:11px;font-family:monospace;white-space:pre-wrap;word-break:break-all;display:none;line-height:1.6"></div>
     <div class="syncing" id="syncing">⏳ Googleスプレッドシートと同期中...</div>
 
     <!-- Weight -->
@@ -714,6 +715,14 @@ function renderWeight() {
 }
 
 // ===== UI HELPERS =====
+let debugLines = [];
+function showDebug(msg) {
+  debugLines.push(msg);
+  const box = document.getElementById('debug-box');
+  if (box) { box.style.display = 'block'; box.textContent = debugLines.join('\n'); }
+  console.log('[DEBUG]', msg);
+}
+
 let toastTimer = null;
 function showToast(msg, type='info') {
   const el = document.getElementById('toast');

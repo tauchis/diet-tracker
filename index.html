@@ -331,6 +331,11 @@ function saveSetup() {
   localStorage.setItem('diet-goal-' + user, goal);
   localStorage.setItem('diet-claude-key', claude);
   localStorage.setItem('diet-gas-url', gas);
+  // グローバル変数も即時更新
+  username  = user;
+  claudeKey = claude;
+  gasUrl    = gas;
+  GOAL      = goal;
   initApp();
 }
 
